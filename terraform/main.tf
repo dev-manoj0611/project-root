@@ -148,19 +148,28 @@ resource "aws_instance" "jenkins" {
 
   user_data = <<-EOF
               #!/bin/bash
+              # Update and install dependencies
               apt update -y
-              apt install -y docker.io openjdk-17-jdk
+              apt install -y docker.io openjdk-17-jdk curl gnupg
 
+              # Setup Docker
               systemctl enable docker
               systemctl start docker
               usermod -aG docker ubuntu
 
-              wget -q -O - https://pkg.jenkins.io/debian-stable/jenkins.io.key | apt-key add -
-              sh -c 'echo deb https://pkg.jenkins.io/debian-stable binary/ > /etc/apt/sources.list.d/jenkins.list'
+              # add Jenkins Repo (Ubuntu 22.04+)
+              curl -fsSL https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key | sudo tee \
+                /usr/share/keyrings/jenkins-keyring.asc > /dev/null
+              
+              echo "deb [signed-by=/usr/share/keyrings/jenkins-keyring.asc] \
+                https://pkg.jenkins.io/debian-stable binary/" | sudo tee \
+                /etc/apt/sources.list.d/jenkins.list > /dev/null
 
+              # Install Jenkins
               apt update -y
               apt install -y jenkins
 
+              # Start Jenkins
               systemctl enable jenkins
               systemctl start jenkins
               EOF
