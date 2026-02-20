@@ -136,7 +136,7 @@ data "aws_ami" "ubuntu" {
 
 resource "aws_instance" "jenkins" {
   ami                         = data.aws_ami.ubuntu.id
-  instance_type               = "t3.large"
+  instance_type               = "m7i-flex.large"
   subnet_id                   = data.aws_subnets.default.ids[0]
   vpc_security_group_ids      = [aws_security_group.jenkins_sg.id]
   key_name                    = var.key_pair_name
