@@ -14,7 +14,7 @@ data "aws_subnets" "default" {
 ############################
 
 resource "aws_ecr_repository" "app_repo" {
-  name = var.app_name
+  name         = var.app_name
   force_delete = true
 }
 
@@ -147,31 +147,37 @@ resource "aws_instance" "jenkins" {
   }
 
   user_data = <<-EOF
+			  
               #!/bin/bash
-              # Update and install dependencies
-              apt update -y
-              apt install -y docker.io openjdk-17-jdk curl gnupg
+              # 1. Create the keyring directory (Terraform needs this created explicitly)
+              sudo mkdir -p /etc/apt/keyrings
 
-              # Setup Docker
-              systemctl enable docker
-              systemctl start docker
-              usermod -aG docker ubuntu
+              # 2. Update and install Java + Docker
+              # Added -y so the script doesn't stop and wait for your permission
+              sudo apt update -y
+              sudo apt install -y fontconfig openjdk-21-jre docker.io curl
 
-              # add Jenkins Repo (Ubuntu 22.04+)
-              curl -fsSL https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key | sudo tee \
-                /usr/share/keyrings/jenkins-keyring.asc > /dev/null
+              # 3. Setup Docker permissions
+              sudo systemctl enable docker
+              sudo systemctl start docker
+              sudo usermod -aG docker ubuntu
+
+              # 4. Official Jenkins logic using the 2026 key
+              sudo wget -O /etc/apt/keyrings/jenkins-keyring.asc \
+                https://pkg.jenkins.io/debian-stable/jenkins.io-2026.key
               
-              echo "deb [signed-by=/usr/share/keyrings/jenkins-keyring.asc] \
-                https://pkg.jenkins.io/debian-stable binary/" | sudo tee \
+              echo "deb [signed-by=/etc/apt/keyrings/jenkins-keyring.asc]" \
+                https://pkg.jenkins.io/debian-stable binary/ | sudo tee \
                 /etc/apt/sources.list.d/jenkins.list > /dev/null
 
-              # Install Jenkins
-              apt update -y
-              apt install -y jenkins
+              # 5. Install Jenkins
+              # Added -y here as well to prevent the "Do you want to continue? [Y/n]" hang
+              sudo apt update -y
+              sudo apt install -y jenkins
 
-              # Start Jenkins
-              systemctl enable jenkins
-              systemctl start jenkins
+              # 6. Start and Enable Jenkins
+              sudo systemctl enable jenkins
+              sudo systemctl start jenkins
               EOF
 
   tags = {
