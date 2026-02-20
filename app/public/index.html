@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>3 Tier App</title>
+</head>
+<body>
+  <h2>User Registration</h2>
+
+  <form id="userForm">
+    <input type="text" id="name" placeholder="Name" required />
+    <input type="email" id="email" placeholder="Email" required />
+    <button type="submit">Submit</button>
+  </form>
+
+  <h3>Users</h3>
+  <ul id="users"></ul>
+
+  <script>
+    document.getElementById("userForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const name = document.getElementById("name").value;
+      const email = document.getElementById("email").value;
+
+      await fetch("/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email })
+      });
+
+      loadUsers();
+    });
+
+    async function loadUsers() {
+      const res = await fetch("/users");
+      const data = await res.json();
+
+      const list = document.getElementById("users");
+      list.innerHTML = "";
+
+      data.forEach(user => {
+        const li = document.createElement("li");
+        li.innerText = user.name + " - " + user.email;
+        list.appendChild(li);
+      });
+    }
+
+    loadUsers();
+  </script>
+</body>
+</html>
