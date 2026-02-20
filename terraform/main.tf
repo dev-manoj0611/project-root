@@ -80,6 +80,98 @@ resource "aws_security_group" "rds_sg" {
   }
 }
 
+
+############################
+# JENKINS SERVER
+############################
+
+resource "aws_security_group" "jenkins_sg" {
+  name   = "${var.app_name}-jenkins-sg"
+  vpc_id = data.aws_vpc.default.id
+
+  ingress {
+    description = "SSH"
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    description = "Jenkins UI"
+    from_port   = 8080
+    to_port     = 8080
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    description = "SonarQube (optional)"
+    from_port   = 9000
+    to_port     = 9000
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+
+data "aws_ami" "ubuntu" {
+  most_recent = true
+
+  owners = ["099720109477"] # Canonical
+
+  filter {
+    name   = "name"
+    values = ["ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-*"]
+  }
+}
+
+
+resource "aws_instance" "jenkins" {
+  ami                         = data.aws_ami.ubuntu.id
+  instance_type               = "t3.large"
+  subnet_id                   = data.aws_subnets.default.ids[0]
+  vpc_security_group_ids      = [aws_security_group.jenkins_sg.id]
+  key_name                    = var.key_pair_name
+  associate_public_ip_address = true
+
+  root_block_device {
+    volume_size = 30
+  }
+
+  user_data = <<-EOF
+              #!/bin/bash
+              apt update -y
+              apt install -y docker.io openjdk-17-jdk
+
+              systemctl enable docker
+              systemctl start docker
+              usermod -aG docker ubuntu
+
+              wget -q -O - https://pkg.jenkins.io/debian-stable/jenkins.io.key | apt-key add -
+              sh -c 'echo deb https://pkg.jenkins.io/debian-stable binary/ > /etc/apt/sources.list.d/jenkins.list'
+
+              apt update -y
+              apt install -y jenkins
+
+              systemctl enable jenkins
+              systemctl start jenkins
+              EOF
+
+  tags = {
+    Name = "jenkins-server"
+  }
+}
+
+
+
 ############################
 # IAM
 ############################

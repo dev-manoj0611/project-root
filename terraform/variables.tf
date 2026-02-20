@@ -22,3 +22,9 @@ variable "db_password" {
 variable "db_name" {
   default = "appdb"
 }
+
+variable "key_pair_name" {
+  description = "Jenkins EC2 Key pair name"
+  type        = string
+  default     = "jenkins-keypair"
+}
